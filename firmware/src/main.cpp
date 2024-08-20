@@ -25,7 +25,7 @@ volatile byte b1,b2,b3,b4,b12,b14,b16,b18;
 //blood preasure values
 volatile byte Pmax, Pmin;
 
-//Is necesary?
+//Is necesary?: no
 //counter of the total bytes
 int count=0;
 //timer to detect bad measure
@@ -41,8 +41,7 @@ void start_i2c();
 void start_sample();
 void receiveEvent(int);
 
-// shutdown I2C?
-void shutdownI2C()
+void disableI2C()
 {
     Wire.begin(0x52);
 }
@@ -52,7 +51,7 @@ void enableI2C()
 }
 void start_sample() {
     startMeasure=1;
-    shutdownI2C();
+    disableI2C();
 }
 void start_i2c() { 
     readI2C = 1;
@@ -78,12 +77,13 @@ void loop(){
         Serial.print(readTemperature());
         Serial.println(" °C");
 
-        //Start blood preasure measure?
+        //Start blood preasure measure?: yes
         delay(500);
         digitalWrite(startPin, LOW);
         delay(200);
         digitalWrite(startPin, HIGH);
         delay(2000);
+        //Automate shutdown
         
         startMeasure = false;
     }
@@ -91,8 +91,7 @@ void loop(){
     if ( readI2C )
     {
         Serial.println("Preparando adquisicion...");
-
-        //why?
+        //why?: 
         delay(4000);
         
         enableI2C();
@@ -114,10 +113,17 @@ int readTemperature()
 
 void readTensiometer()
 {
-    if( count == 20 )
+    if( millis()-t1 > BLOOD_PREASURE_TIMEOUT )
     {
+        Serial.println("[!] ERROR EN LA MEDICION ");
         count=0;
-        shutdownI2C();
+        disableI2C();
+    }
+    else if( count == 20 )
+    {
+        //All work
+        count=0;
+        disableI2C();
 
         Pmax = ( (b12 & d2) >> 4 )*100 + ( (b14 & d2) >> 4 )*10 + (b14 & d1) ;
         Pmin = ( b12 & d1 ) * 100 + ( (b16&d2) >> 4 ) * 10 + ( b16 & d1) ;
@@ -128,14 +134,6 @@ void readTensiometer()
         Serial.println(Pmin);
         Serial.print("Pulsaciones:  ");
         Serial.println(b18);
-    }
-    
-    //Work?
-    if( millis()-t1 > BLOOD_PREASURE_TIMEOUT )
-    {
-        Serial.println("[!] ERROR EN LA MEDICION ");
-        count=0;
-        shutdownI2C();
     }
 }
 
