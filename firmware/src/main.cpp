@@ -91,7 +91,7 @@ void loop(){
     if ( readI2C )
     {
         Serial.println("Preparando adquisicion...");
-        //why?: 
+        //why?: don't why
         delay(4000);
         
         enableI2C();
