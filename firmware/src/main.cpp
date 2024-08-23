@@ -78,11 +78,10 @@ void loop(){
         Serial.println(" °C");
 
         //Start blood preasure measure?: yes
-        delay(500);
         digitalWrite(startPin, LOW);
         delay(200);
         digitalWrite(startPin, HIGH);
-        delay(2000);
+        delay(200);
         //Automate shutdown
         
         startMeasure = false;
@@ -90,13 +89,8 @@ void loop(){
 
     if ( readI2C )
     {
-        Serial.println("Preparando adquisicion...");
-        //why?: don't why
-        delay(4000);
-        
         enableI2C();
         Wire.onReceive(receiveEvent);
-        readTensiometer();
 
         readI2C = false;
     }
@@ -110,6 +104,7 @@ int readTemperature()
     int Temp = sensor.getTempCByIndex(0);
     return Temp;
 }
+
 
 void readTensiometer()
 {
@@ -150,6 +145,8 @@ void receiveEvent(int howMany)
         Serial.print(count);
         Serial.print(" es:  ");
         Serial.println(i2cDataRx); 
+
+        bool breakLoop = false;
 
         switch (count)
         {
@@ -192,7 +189,13 @@ void receiveEvent(int howMany)
 
             case 20:
                 Serial.println("[i] Se obtuvieron 20 BYTEs");
+                breakLoop = true;
                 break;
+        }
+        if(breakLoop)
+        {
+            readTensiometer();
+            break;
         }
     }    
 }
