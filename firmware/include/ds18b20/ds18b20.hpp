@@ -1,7 +1,6 @@
 #ifndef UNITEC_LIB_DS18B20
 #define UNITEC_LIB_DS18B20
 
-//DS18B20 deps
 #include <SPI.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
