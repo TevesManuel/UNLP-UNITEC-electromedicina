@@ -1,16 +1,14 @@
 #include <Arduino.h>
 
-//DS18B20 deps
-#include <SPI.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
+#include <ds18b20/ds18b20.hpp>
+
 //TENSIOMETER deps
 #include <Wire.h>
 
 #define motorPin  2
 #define buttonPin 3
 #define startPin  4
-#define ONE_WIRE_PIN 6
+#define TEMPERATURE_SENSOR_PIN 6
 
 #define BLOOD_PREASURE_TIMEOUT 7000
 
@@ -24,17 +22,13 @@ volatile byte d1=0x0F , d2=0xF0 , aux;
 volatile byte b1,b2,b3,b4,b12,b14,b16,b18;
 //blood preasure values
 volatile byte Pmax, Pmin;
-
-//Is necesary?: no
 //counter of the total bytes
 int count=0;
 //timer to detect bad measure
 long int t1=0;
 
-OneWire oneWireBus (ONE_WIRE_PIN);
-DallasTemperature sensor(&oneWireBus);
+ds18b20 temperatureSensor(TEMPERATURE_SENSOR_PIN);
 
-int readTemperature();
 void readTensiometer();
 
 void start_i2c();
@@ -49,11 +43,12 @@ void enableI2C()
 {
     Wire.begin(0x50);
 }
-void start_sample() {
+void startSample()
+{
     startMeasure=1;
-    disableI2C();
 }
-void start_i2c() { 
+void startI2c()
+{ 
     readI2C = 1;
 }
 
@@ -63,21 +58,26 @@ void setup()
     pinMode(motorPin, INPUT); 
     pinMode(startPin, OUTPUT);
 
-    attachInterrupt(digitalPinToInterrupt(buttonPin), start_sample , FALLING);
-    attachInterrupt(digitalPinToInterrupt(motorPin), start_i2c , FALLING);
+    attachInterrupt(digitalPinToInterrupt(buttonPin), startSample , FALLING);
+    attachInterrupt(digitalPinToInterrupt(motorPin), startI2c , FALLING);
     
+    temperatureSensor.begin();
+
+    disableI2C();
+
     Serial.begin(115200);   
 }
 
-void loop(){
+void loop()
+{
     if ( startMeasure )
     {
         Serial.println("Se apreto boton");
         Serial.print("La temperatura es: ");
-        Serial.print(readTemperature());
+        Serial.print(temperatureSensor.readTemperature());
         Serial.println(" °C");
 
-        //Start blood preasure measure?: yes
+        //Start blood preasure measure
         digitalWrite(startPin, LOW);
         delay(200);
         digitalWrite(startPin, HIGH);
@@ -97,43 +97,15 @@ void loop(){
 
 }
 
-//return temperature measure with the ds18b20
-int readTemperature()
-{
-    sensor.requestTemperatures();
-    int Temp = sensor.getTempCByIndex(0);
-    return Temp;
-}
 
-
-void readTensiometer()
-{
+void receiveEvent(int howMany) 
+{  
     if( millis()-t1 > BLOOD_PREASURE_TIMEOUT )
     {
         Serial.println("[!] ERROR EN LA MEDICION ");
         count=0;
         disableI2C();
     }
-    else if( count == 20 )
-    {
-        //All work
-        count=0;
-        disableI2C();
-
-        Pmax = ( (b12 & d2) >> 4 )*100 + ( (b14 & d2) >> 4 )*10 + (b14 & d1) ;
-        Pmin = ( b12 & d1 ) * 100 + ( (b16&d2) >> 4 ) * 10 + ( b16 & d1) ;
-
-        Serial.print("presion sistolica:   ");
-        Serial.println(Pmax);
-        Serial.print("presion diastolica:  ");
-        Serial.println(Pmin);
-        Serial.print("Pulsaciones:  ");
-        Serial.println(b18);
-    }
-}
-
-void receiveEvent(int howMany) 
-{  
     volatile byte i2cDataRx;
     while (0 < Wire.available()) 
     {   
@@ -198,4 +170,20 @@ void receiveEvent(int howMany)
             break;
         }
     }    
+}
+
+void readTensiometer()
+{
+    count=0;
+    disableI2C();
+
+    Pmax = ( (b12 & d2) >> 4 )*100 + ( (b14 & d2) >> 4 )*10 + (b14 & d1) ;
+    Pmin = ( b12 & d1 ) * 100 + ( (b16&d2) >> 4 ) * 10 + ( b16 & d1) ;
+
+    Serial.print("presion sistolica:   ");
+    Serial.println(Pmax);
+    Serial.print("presion diastolica:  ");
+    Serial.println(Pmin);
+    Serial.print("Pulsaciones:  ");
+    Serial.println(b18);
 }
