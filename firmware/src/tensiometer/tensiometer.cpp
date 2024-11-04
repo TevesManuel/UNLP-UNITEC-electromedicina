@@ -31,9 +31,9 @@ void Tensiometer::begin()
 void Tensiometer::startMeasure()
 {
     //Start blood preasure measure
-    digitalWrite(startPin, LOW);
+    digitalWrite(this->startPin, LOW);
     delay(200);
-    digitalWrite(startPin, HIGH);
+    digitalWrite(this->startPin, HIGH);
     delay(200);
 }
 

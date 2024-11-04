@@ -12,7 +12,7 @@ bool startMeasure=false;
 bool readI2C=false;
 
 ds18b20 temperatureSensor(TEMPERATURE_SENSOR_PIN);
-Tensiometer tensiometerSensor;
+Tensiometer tensiometerSensor(startPin);
 
 void startSample()
 {
@@ -32,7 +32,8 @@ void setup()
     attachInterrupt(digitalPinToInterrupt(motorPin), startI2c , FALLING);
     
     temperatureSensor.begin();
-
+    tensiometerSensor.begin();
+    
     Serial.begin(115200);   
 }
 
@@ -44,7 +45,7 @@ void loop()
         Serial.print("La temperatura es: ");
         Serial.print(temperatureSensor.readTemperature());
         Serial.println(" °C");
-        
+        tensiometerSensor.startMeasure();
         startMeasure = false;
     }
 
